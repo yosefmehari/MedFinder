@@ -1,23 +1,31 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Language } from '@/lib/types';
 import { getTranslation } from '@/lib/localization';
-import { Pill, Globe, ShieldCheck } from 'lucide-react';
+import { Pill, Globe, Building2 } from 'lucide-react';
 
 interface HeaderProps {
   language: Language;
   onLanguageToggle: () => void;
+  onOpenReservations?: () => void;
+  activeHoldsCount?: number;
 }
 
-export default function Header({ language, onLanguageToggle }: HeaderProps) {
+export default function Header({
+  language,
+  onLanguageToggle,
+  onOpenReservations,
+  activeHoldsCount = 0,
+}: HeaderProps) {
   const t = getTranslation(language);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-emerald-700 text-white shadow-md">
       <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
         {/* Brand */}
-        <div className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 shadow-inner backdrop-blur-sm">
             <Pill className="h-6 w-6 text-emerald-200" />
           </div>
@@ -32,10 +40,21 @@ export default function Header({ language, onLanguageToggle }: HeaderProps) {
               {language === 'am' ? 'የመድኃኒት መፈለጊያ ፕላትፎርም' : 'Real-time Medicine Radar'}
             </p>
           </div>
-        </div>
+        </Link>
 
-        {/* Language Switcher & Trust Badge */}
+        {/* Right Actions */}
         <div className="flex items-center space-x-2">
+          {/* Pharmacy Portal Link */}
+          <Link
+            href="/pharmacy"
+            className="flex items-center space-x-1 rounded-full bg-emerald-800/80 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-900 transition active:scale-95"
+            title="Pharmacy Admin Portal"
+          >
+            <Building2 className="h-3.5 w-3.5 text-emerald-300" />
+            <span className="hidden sm:inline">Dispensary</span>
+          </Link>
+
+          {/* Language Switcher */}
           <button
             onClick={onLanguageToggle}
             className="flex items-center space-x-1 rounded-full bg-emerald-800/80 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-800 transition active:scale-95"

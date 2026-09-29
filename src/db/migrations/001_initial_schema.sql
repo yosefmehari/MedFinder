@@ -8,17 +8,44 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- 2. Enumerated Types
-CREATE TYPE user_role AS ENUM ('patient', 'pharmacy_admin', 'super_admin');
-CREATE TYPE verification_status AS ENUM ('pending', 'approved', 'rejected');
-CREATE TYPE stock_status AS ENUM ('in_stock', 'low_stock', 'out_of_stock');
-CREATE TYPE prescription_status AS ENUM ('submitted', 'under_review', 'matched', 'completed', 'cancelled');
-CREATE TYPE payment_provider AS ENUM ('telebirr', 'chapa', 'free_tier');
-CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
-CREATE TYPE reservation_status AS ENUM ('active', 'dispensed', 'expired', 'cancelled');
+-- 2. Enumerated Types (Idempotent)
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('patient', 'pharmacy_admin', 'super_admin');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE verification_status AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE stock_status AS ENUM ('in_stock', 'low_stock', 'out_of_stock');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE prescription_status AS ENUM ('submitted', 'under_review', 'matched', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_provider AS ENUM ('telebirr', 'chapa', 'free_tier');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed', 'refunded');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE reservation_status AS ENUM ('active', 'dispensed', 'expired', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 3. Users Table (Patients, Pharmacy Operators, Super Admins)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE,
     phone_number VARCHAR(30) UNIQUE NOT NULL, -- Ethiopian standard +251...
@@ -32,7 +59,7 @@ CREATE TABLE users (
 
 -- 4. Pharmacies Table
 -- Stores retail pharmacy profiles, official license, and exact GPS coordinates in Addis Ababa
-CREATE TABLE pharmacies (
+CREATE TABLE IF NOT EXISTS pharmacies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     name VARCHAR(200) NOT NULL,
@@ -64,7 +91,7 @@ CREATE TABLE pharmacies (
 
 -- 5. Medicines Catalog
 -- Comprehensive registry of medicines, categorized by therapeutic class and scarcity tag
-CREATE TABLE medicines (
+CREATE TABLE IF NOT EXISTS medicines (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     brand_name VARCHAR(200) NOT NULL,
     generic_name VARCHAR(200) NOT NULL,
@@ -82,7 +109,7 @@ CREATE TABLE medicines (
 
 -- 6. Pharmacy Inventory
 -- Real-time stock levels of medicines across Addis Ababa pharmacies
-CREATE TABLE pharmacy_inventory (
+CREATE TABLE IF NOT EXISTS pharmacy_inventory (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pharmacy_id UUID NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
     medicine_id UUID NOT NULL REFERENCES medicines(id) ON DELETE CASCADE,
@@ -100,7 +127,7 @@ CREATE TABLE pharmacy_inventory (
 
 -- 7. Prescriptions Table
 -- Patient uploaded prescription images for scanning & pharmacy discovery
-CREATE TABLE prescriptions (
+CREATE TABLE IF NOT EXISTS prescriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Nullable for anonymous/guest search
     patient_name VARCHAR(150),
@@ -118,7 +145,7 @@ CREATE TABLE prescriptions (
 
 -- 8. Reservations & Pay-to-Unlock Transactions
 -- Handles 2-hour stock reservations and pay-to-unlock pharmacy contacts (Telebirr / Chapa)
-CREATE TABLE reservations (
+CREATE TABLE IF NOT EXISTS reservations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     reservation_code VARCHAR(12) UNIQUE NOT NULL, -- e.g. MED-8492
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -141,25 +168,25 @@ CREATE TABLE reservations (
 -- ====================================================================
 
 -- PostGIS Spatial Index for lightning-fast radius searches around Addis Ababa
-CREATE INDEX idx_pharmacies_location ON pharmacies USING GIST(location);
-CREATE INDEX idx_pharmacies_sub_city ON pharmacies(sub_city);
-CREATE INDEX idx_pharmacies_is_verified ON pharmacies(is_verified);
+CREATE INDEX IF NOT EXISTS idx_pharmacies_location ON pharmacies USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_pharmacies_sub_city ON pharmacies(sub_city);
+CREATE INDEX IF NOT EXISTS idx_pharmacies_is_verified ON pharmacies(is_verified);
 
 -- Full-text / Trigram Index for fuzzy matching brand & generic medicine names
-CREATE INDEX idx_medicines_search_text ON medicines USING gin (
+CREATE INDEX IF NOT EXISTS idx_medicines_search_text ON medicines USING gin (
     to_tsvector('english', brand_name || ' ' || generic_name || ' ' || COALESCE(therapeutic_category, ''))
 );
-CREATE INDEX idx_medicines_brand_trgm ON medicines USING gin (brand_name gin_trgm_ops);
-CREATE INDEX idx_medicines_generic_trgm ON medicines USING gin (generic_name gin_trgm_ops);
-CREATE INDEX idx_medicines_is_scarce ON medicines(is_scarce);
+CREATE INDEX IF NOT EXISTS idx_medicines_brand_trgm ON medicines USING gin (brand_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_medicines_generic_trgm ON medicines USING gin (generic_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_medicines_is_scarce ON medicines(is_scarce);
 
 -- Inventory indexes
-CREATE INDEX idx_inventory_pharmacy ON pharmacy_inventory(pharmacy_id);
-CREATE INDEX idx_inventory_medicine ON pharmacy_inventory(medicine_id);
-CREATE INDEX idx_inventory_stock_status ON pharmacy_inventory(stock_status);
+CREATE INDEX IF NOT EXISTS idx_inventory_pharmacy ON pharmacy_inventory(pharmacy_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_medicine ON pharmacy_inventory(medicine_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_stock_status ON pharmacy_inventory(stock_status);
 
 -- Reservations index
-CREATE INDEX idx_reservations_status_expires ON reservations(reservation_status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_reservations_status_expires ON reservations(reservation_status, expires_at);
 
 -- ====================================================================
 -- Stored Helper Function: PostGIS Proximity Pharmacy Search

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PharmacyResultItem, Language } from '@/lib/types';
 import { getTranslation } from '@/lib/localization';
 import {
@@ -12,7 +12,9 @@ import {
   Unlock,
   AlertCircle,
   Sparkles,
-  ExternalLink,
+  Navigation,
+  Share2,
+  Check,
 } from 'lucide-react';
 
 interface PharmacyCardProps {
@@ -20,6 +22,7 @@ interface PharmacyCardProps {
   language: Language;
   onUnlockClick: (item: PharmacyResultItem) => void;
   isUnlocked: boolean;
+  reservationCode?: string;
 }
 
 export default function PharmacyCard({
@@ -27,12 +30,35 @@ export default function PharmacyCard({
   language,
   onUnlockClick,
   isUnlocked,
+  reservationCode,
 }: PharmacyCardProps) {
   const t = getTranslation(language);
   const { pharmacy, medicine, stockStatus, unitPrice, lastVerifiedAt, distanceKm } = item;
+  const [shared, setShared] = useState(false);
 
   // Approximate driving time in Addis Ababa traffic (avg 18 km/h)
   const approxDriveMins = Math.max(3, Math.round((distanceKm / 18) * 60));
+
+  const handleShare = async () => {
+    const text = `Found ${medicine.brandName} (${medicine.strength}) at ${pharmacy.name}, ${pharmacy.subCity}! Price: ${unitPrice} ETB. Check on MedFinder Addis.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `MedFinder: ${medicine.brandName} in Stock`,
+          text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        // User cancelled share
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    }
+  };
+
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${pharmacy.latitude},${pharmacy.longitude}`;
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -60,7 +86,7 @@ export default function PharmacyCard({
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
             <span className="flex items-center gap-1 text-emerald-700 font-medium">
               <MapPin className="h-3.5 w-3.5" />
-              {pharmacy.subCity} ({pharmacy.woreda})
+              {pharmacy.subCity} {pharmacy.woreda ? `(${pharmacy.woreda})` : ''}
             </span>
             <span>•</span>
             <span className="font-semibold text-slate-700">
@@ -123,19 +149,25 @@ export default function PharmacyCard({
       {/* Action / Unlock Section */}
       <div className="pt-1">
         {isUnlocked ? (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-2">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-emerald-900 flex items-center gap-1.5">
                 <Unlock className="h-4 w-4 text-emerald-600" />
                 Contact Info Unlocked (Reserved 2h)
               </span>
-              <span className="text-[11px] font-bold text-emerald-700">Stock Held</span>
+              {reservationCode ? (
+                <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-300">
+                  Code: {reservationCode}
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-emerald-700">Stock Held</span>
+              )}
             </div>
 
             <div className="text-xs text-slate-800 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">{t.pharmacyAddress}</span>
-                <span className="font-medium text-right">{pharmacy.streetAddress}</span>
+                <span className="font-medium text-right max-w-[220px] truncate">{pharmacy.streetAddress}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">{t.pharmacyContact}</span>
@@ -149,19 +181,40 @@ export default function PharmacyCard({
               </div>
             </div>
 
-            <a
-              href={`tel:${pharmacy.phoneNumber}`}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-800 transition active:scale-[0.98]"
-            >
-              <Phone className="h-3.5 w-3.5" />
-              {t.callPharmacy}
-            </a>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <a
+                href={`tel:${pharmacy.phoneNumber}`}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-700 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-800 transition active:scale-[0.98]"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                <span>{t.callPharmacy}</span>
+              </a>
+
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-white border border-emerald-300 py-2.5 text-xs font-bold text-emerald-800 shadow-xs hover:bg-emerald-50 transition active:scale-[0.98]"
+              >
+                <Navigation className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Directions</span>
+              </a>
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs text-slate-500 flex items-center gap-1">
-              <Lock className="h-3.5 w-3.5 text-slate-400" />
-              <span>Contact & Exact Address Protected</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShare}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                title="Share medicine info"
+              >
+                {shared ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
+              </button>
+              <div className="text-xs text-slate-500 flex items-center gap-1">
+                <Lock className="h-3.5 w-3.5 text-slate-400" />
+                <span>Exact address locked</span>
+              </div>
             </div>
 
             <button

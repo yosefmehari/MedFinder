@@ -62,3 +62,44 @@ export interface PharmacyResultItem {
 }
 
 export type Language = 'en' | 'am';
+
+export interface Reservation {
+  id: string;
+  reservationCode: string;
+  pharmacyId: string;
+  medicineId: string;
+  pharmacyName?: string;
+  medicineName?: string;
+  patientName: string;
+  patientPhone: string;
+  holdFeeEtb: number;
+  paymentProvider: 'telebirr' | 'chapa' | 'free_tier';
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+  reservationStatus: 'active' | 'dispensed' | 'expired' | 'cancelled';
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface Prescription {
+  id: string;
+  patientName: string;
+  patientPhone: string;
+  imageUrl: string;
+  notes?: string;
+  preferredSubCity?: string;
+  status: 'submitted' | 'under_review' | 'matched' | 'completed' | 'cancelled';
+  createdAt: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  pharmacyId: string;
+  medicineId: string;
+  medicine: Medicine;
+  stockStatus: StockStatus;
+  quantity: number;
+  unitPrice: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  lastVerifiedAt: string;
+}

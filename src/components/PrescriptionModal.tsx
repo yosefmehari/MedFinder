@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { SubCityId, Language } from '@/lib/types';
 import { ADDIS_SUB_CITIES } from '@/lib/constants';
 import { getTranslation } from '@/lib/localization';
-import { X, UploadCloud, FileText, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { X, UploadCloud, CheckCircle2, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 interface PrescriptionModalProps {
   language: Language;
@@ -25,26 +25,57 @@ export default function PrescriptionModal({
   const [notes, setNotes] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPreviewUrl(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
+    setErrorMessage(null);
 
-    setTimeout(() => {
-      setIsUploading(false);
+    try {
+      const response = await fetch('/api/prescriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientPhone: patientPhone.trim(),
+          preferredSubCity,
+          notes: notes.trim(),
+          imageUrl: previewUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit prescription');
+      }
+
+      setSubmittedId(data.prescription.id);
       setIsSuccess(true);
+
       setTimeout(() => {
-        onPrescriptionSubmitted('rx-9912');
-      }, 1500);
-    }, 1800);
+        onPrescriptionSubmitted(data.prescription.id);
+      }, 2500);
+    } catch (err: any) {
+      console.error('Prescription submission failed:', err);
+      setErrorMessage(err.message || 'Failed to broadcast prescription. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -74,18 +105,30 @@ export default function PrescriptionModal({
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h4 className="text-lg font-bold text-slate-900">
-              {language === 'am' ? 'የሐኪም ማዘዣው በተሳካ ሁኔታ ተልኳል!' : 'Prescription Submitted!'}
+              {language === 'am' ? 'የሐኪም ማዘዣው በተሳካ ሁኔታ ተልኳል!' : 'Prescription Broadcast Sent!'}
             </h4>
             <p className="text-xs text-slate-600 max-w-xs mx-auto">
               Pharmacies in <strong className="font-semibold text-emerald-800">{preferredSubCity.toUpperCase()}</strong> have been alerted. You will receive an SMS response shortly.
             </p>
+            {submittedId && (
+              <p className="text-[11px] font-mono text-slate-400">
+                Tracking ID: {submittedId}
+              </p>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            {errorMessage && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             {/* File drop / preview */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                {language === 'am' ? 'የሐኪም ማዘዣ ፎቶ ወይም ዶክመንት' : 'Prescription Photo (JPG, PNG, PDF)'}
+                {language === 'am' ? 'የሐኪም ማዘዣ ፎቶ ወይም ዶክመንት' : 'Prescription Photo (JPG, PNG)'}
               </label>
 
               {previewUrl ? (
@@ -118,7 +161,7 @@ export default function PrescriptionModal({
                   </span>
                   <input
                     type="file"
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     required
                     onChange={handleFileChange}
                     className="hidden"

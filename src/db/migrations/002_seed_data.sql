@@ -7,7 +7,8 @@ INSERT INTO users (id, email, phone_number, full_name, role) VALUES
 ('a0000000-0000-0000-0000-000000000001', 'admin@medfinder.et', '+251911223344', 'MedFinder SuperAdmin', 'super_admin'),
 ('b0000000-0000-0000-0000-000000000002', 'kenema.bole@gmail.com', '+251911456789', 'Kenema Pharmacy Bole Branch', 'pharmacy_admin'),
 ('b0000000-0000-0000-0000-000000000003', 'lion.mexico@gmail.com', '+251922334455', 'Lion Pharmacy Kirkos', 'pharmacy_admin'),
-('b0000000-0000-0000-0000-000000000004', 'redcross.piazza@gmail.com', '+251933445566', 'Red Cross Pharmacy Arada', 'pharmacy_admin');
+('b0000000-0000-0000-0000-000000000004', 'redcross.piazza@gmail.com', '+251933445566', 'Red Cross Pharmacy Arada', 'pharmacy_admin')
+ON CONFLICT (id) DO NOTHING;
 
 -- 2. Insert Addis Ababa Pharmacies with real GPS Coordinates
 INSERT INTO pharmacies (
@@ -98,7 +99,8 @@ INSERT INTO pharmacies (
     TRUE,
     'approved',
     4.6
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- 3. Insert Common & Scarce Medicines
 INSERT INTO medicines (
@@ -176,7 +178,8 @@ INSERT INTO medicines (
     FALSE,
     TRUE,
     420.00
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- 4. Insert Inventory Items (Stock at Pharmacies)
 INSERT INTO pharmacy_inventory (
@@ -197,4 +200,5 @@ INSERT INTO pharmacy_inventory (
 
 -- CarePlus Megenagna has Ventolin & Glucophage
 ('c0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000003', 'in_stock', 18, 860.00, 'VEN-019', '2027-01-15', 'Original GlaxoSmithKline.'),
-('c0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000005', 'in_stock', 80, 380.00, 'GLU-902', '2027-06-30', 'Strip of 10 tablets x 5.');
+('c0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000005', 'in_stock', 80, 380.00, 'GLU-902', '2027-06-30', 'Strip of 10 tablets x 5.')
+ON CONFLICT (pharmacy_id, medicine_id) DO NOTHING;

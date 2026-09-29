@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PharmacyResultItem, Language } from '@/lib/types';
+import { PharmacyResultItem, Language, Reservation } from '@/lib/types';
 import { getTranslation } from '@/lib/localization';
-import { X, ShieldCheck, Clock, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { X, ShieldCheck, Clock, CheckCircle2, Loader2, ArrowRight, Copy, Check } from 'lucide-react';
 
 interface UnlockModalProps {
   item: PharmacyResultItem | null;
   language: Language;
   onClose: () => void;
-  onSuccess: (item: PharmacyResultItem) => void;
+  onSuccess: (item: PharmacyResultItem, reservation?: Reservation) => void;
 }
 
 export default function UnlockModal({
@@ -20,24 +20,79 @@ export default function UnlockModal({
 }: UnlockModalProps) {
   const t = getTranslation(language);
   const [patientPhone, setPatientPhone] = useState('0911223344');
-  const [selectedMethod, setSelectedMethod] = useState<'telebirr' | 'chapa' | 'free'>('telebirr');
+  const [selectedMethod, setSelectedMethod] = useState<'telebirr' | 'chapa' | 'free_tier'>('telebirr');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!item) return null;
 
-  const handlePayAndReserve = (e: React.FormEvent) => {
+  const handlePayAndReserve = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    setErrorMessage(null);
 
-    // Simulate Telebirr / Chapa payment webhook confirmation
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pharmacyId: item.pharmacy.id,
+          medicineId: item.medicine.id,
+          pharmacyName: item.pharmacy.name,
+          medicineName: item.medicine.brandName,
+          patientPhone: patientPhone.trim(),
+          paymentProvider: selectedMethod,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to complete reservation hold.');
+      }
+
+      const resObj: Reservation = data.reservation;
+      setReservation(resObj);
       setIsComplete(true);
+
+      // Save to localStorage for quick patient retrieval
+      try {
+        const stored = JSON.parse(localStorage.getItem('medfinder_reservations') || '[]');
+        stored.unshift({
+          ...resObj,
+          pharmacyName: item.pharmacy.name,
+          pharmacyPhone: item.pharmacy.phoneNumber,
+          pharmacyAddress: item.pharmacy.streetAddress,
+          subCity: item.pharmacy.subCity,
+          medicineName: item.medicine.brandName,
+          unitPrice: item.unitPrice,
+        });
+        localStorage.setItem('medfinder_reservations', JSON.stringify(stored.slice(0, 20)));
+      } catch (err) {
+        console.warn('localStorage access failed:', err);
+      }
+
+      // Automatically trigger success callback after a brief celebration
       setTimeout(() => {
-        onSuccess(item);
-      }, 1200);
-    }, 1500);
+        onSuccess(item, resObj);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Reservation error:', err);
+      setErrorMessage(err.message || 'Payment processing failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (reservation?.reservationCode) {
+      navigator.clipboard.writeText(reservation.reservationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -62,23 +117,65 @@ export default function UnlockModal({
           </button>
         </div>
 
-        {isComplete ? (
-          <div className="py-8 text-center space-y-3">
+        {isComplete && reservation ? (
+          <div className="py-6 text-center space-y-4">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h4 className="text-lg font-bold text-slate-900">{t.reservationSuccess}</h4>
-            <p className="text-xs text-slate-600 max-w-xs mx-auto">
-              Your reservation code is <strong className="font-mono text-emerald-800">MED-4912</strong>. Unlocking contact details...
-            </p>
+            <div>
+              <h4 className="text-lg font-bold text-slate-900">{t.reservationSuccess}</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Show this code to the pharmacist when collecting your medicine:
+              </p>
+            </div>
+
+            {/* Reservation Code Badge */}
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-300 px-5 py-3">
+              <span className="font-mono text-2xl font-black tracking-wider text-emerald-900">
+                {reservation.reservationCode}
+              </span>
+              <button
+                onClick={handleCopyCode}
+                className="p-1 rounded-lg text-emerald-700 hover:bg-emerald-200 transition"
+                title="Copy code"
+              >
+                {copied ? <Check className="h-5 w-5 text-emerald-600" /> : <Copy className="h-5 w-5" />}
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600 space-y-1 text-left border border-slate-200">
+              <div className="flex justify-between">
+                <span className="font-semibold text-slate-700">Held At:</span>
+                <span>{item.pharmacy.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold text-slate-700">Expires At:</span>
+                <span className="text-amber-700 font-bold">
+                  {new Date(reservation.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (2h hold)
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onSuccess(item, reservation)}
+              className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition"
+            >
+              View Pharmacy Contact Now
+            </button>
           </div>
         ) : (
           <form onSubmit={handlePayAndReserve} className="mt-4 space-y-4">
+            {errorMessage && (
+              <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                {errorMessage}
+              </div>
+            )}
+
             {/* Medicine & Pharmacy Summary */}
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs space-y-1">
               <div className="flex justify-between font-bold text-slate-800">
                 <span>{item.medicine.brandName} ({item.medicine.strength})</span>
-                <span>{item.unitPrice} ETB</span>
+                <span>{item.unitPrice.toLocaleString()} ETB</span>
               </div>
               <p className="text-slate-500">Pharmacy: {item.pharmacy.name} • {item.pharmacy.subCity}</p>
               <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium pt-1">
@@ -140,9 +237,9 @@ export default function UnlockModal({
                 {/* Free Demo Tier */}
                 <button
                   type="button"
-                  onClick={() => setSelectedMethod('free')}
+                  onClick={() => setSelectedMethod('free_tier')}
                   className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition ${
-                    selectedMethod === 'free'
+                    selectedMethod === 'free_tier'
                       ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
@@ -162,7 +259,7 @@ export default function UnlockModal({
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Contacting Telebirr API...</span>
+                  <span>Processing Payment & Holding Stock...</span>
                 </>
               ) : (
                 <>
