@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Language } from '@/lib/types';
 import { getTranslation } from '@/lib/localization';
-import { Pill, Globe, Building2 } from 'lucide-react';
+import { Pill, Globe, Building2, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   language: Language;
@@ -48,10 +48,20 @@ export default function Header({
           <Link
             href="/pharmacy"
             className="flex items-center space-x-1 rounded-full bg-emerald-800/80 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-900 transition active:scale-95"
-            title="Pharmacy Admin Portal"
+            title="Pharmacy Dispensary Portal"
           >
             <Building2 className="h-3.5 w-3.5 text-emerald-300" />
             <span className="hidden sm:inline">Dispensary</span>
+          </Link>
+
+          {/* Admin Control Panel Link */}
+          <Link
+            href="/admin"
+            className="flex items-center space-x-1 rounded-full bg-emerald-900/90 px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:bg-emerald-950 transition active:scale-95 border border-emerald-600/60 shadow-xs"
+            title="Platform Super Admin Control Panel"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+            <span>Admin</span>
           </Link>
 
           {/* Language Switcher */}

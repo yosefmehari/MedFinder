@@ -135,3 +135,47 @@ CREATE INDEX IF NOT EXISTS idx_medicines_brand_trgm ON medicines USING gin (bran
 CREATE INDEX IF NOT EXISTS idx_medicines_generic_trgm ON medicines USING gin (generic_name gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_inventory_pharmacy ON pharmacy_inventory(pharmacy_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_medicine ON pharmacy_inventory(medicine_id);
+
+-- Subscription Plans
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    price_etb NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    duration_days INTEGER NOT NULL DEFAULT 30,
+    features JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Pharmacy Subscriptions (Manual & Self-Managed Admin Subscriptions)
+CREATE TABLE IF NOT EXISTS pharmacy_subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pharmacy_id UUID NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
+    plan_id UUID REFERENCES subscription_plans(id) ON DELETE SET NULL,
+    plan_name VARCHAR(100) NOT NULL,
+    price_paid_etb NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'manual_admin',
+    payment_reference VARCHAR(150),
+    status VARCHAR(30) NOT NULL DEFAULT 'active',
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    admin_notes TEXT,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pharma_sub_pharma ON pharmacy_subscriptions(pharmacy_id);
+CREATE INDEX IF NOT EXISTS idx_pharma_sub_status ON pharmacy_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_pharma_sub_expires ON pharmacy_subscriptions(expires_at);
+
+-- Platform Settings
+CREATE TABLE IF NOT EXISTS platform_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -24,6 +24,7 @@ import {
   Loader2,
   Database,
   Building2,
+  Megaphone,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -50,8 +51,21 @@ export default function HomePage() {
   const [isReservationsDrawerOpen, setIsReservationsDrawerOpen] = useState(false);
   const [activeHoldsCount, setActiveHoldsCount] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState<{ active: boolean; message: string } | null>(null);
 
   const t = getTranslation(language);
+
+  // Load platform announcements
+  useEffect(() => {
+    fetch('/api/admin/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.settings?.announcement?.active && data.settings.announcement.message) {
+          setAnnouncement(data.settings.announcement);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Restore unlocked items and active holds from localStorage
   useEffect(() => {
@@ -162,6 +176,19 @@ export default function HomePage() {
 
       {/* Main Container - Mobile Centered View */}
       <main className="mx-auto w-full max-w-lg px-4 py-4 space-y-4 flex-1">
+        {/* Global Admin Announcement Ticker if Active */}
+        {announcement?.active && announcement.message && (
+          <div className="flex items-center gap-2.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 p-3 text-amber-900 shadow-xs animate-in fade-in duration-300">
+            <Megaphone className="h-4 w-4 text-amber-600 shrink-0 animate-bounce" />
+            <div className="text-xs font-semibold leading-tight">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-amber-700 bg-amber-200/80 px-1.5 py-0.5 rounded mr-1.5">
+                Notice
+              </span>
+              <span>{announcement.message}</span>
+            </div>
+          </div>
+        )}
+
         {/* Banner Alert for Addis Scarce Medicines */}
         <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 p-3.5 text-white shadow-sm">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-xs">

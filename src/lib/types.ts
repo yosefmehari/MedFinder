@@ -103,3 +103,58 @@ export interface InventoryItem {
   expiryDate?: string;
   lastVerifiedAt: string;
 }
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  priceEtb: number;
+  durationDays: number;
+  features: string[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'pending';
+
+export interface PharmacySubscription {
+  id: string;
+  pharmacyId: string;
+  pharmacyName?: string;
+  pharmacySubCity?: string;
+  pharmacyPhone?: string;
+  planId?: string;
+  planName: string;
+  pricePaidEtb: number;
+  paymentMethod: string; // 'cash' | 'cbe_transfer' | 'telebirr' | 'chapa' | 'complimentary' | 'manual_admin'
+  paymentReference?: string;
+  status: SubscriptionStatus;
+  startsAt: string;
+  expiresAt: string;
+  adminNotes?: string;
+  createdAt?: string;
+  daysRemaining?: number;
+}
+
+export interface PlatformSettings {
+  holdFeeEtb: number;
+  announcement: {
+    active: boolean;
+    message: string;
+  };
+  allowNewRegistrations: boolean;
+}
+
+export interface AdminStats {
+  totalPharmacies: number;
+  verifiedPharmacies: number;
+  activeSubscriptions: number;
+  totalRevenueEtb: number;
+  totalMedicines: number;
+  scarceMedicines: number;
+  totalReservations: number;
+  activeHolds: number;
+  totalPrescriptions: number;
+}

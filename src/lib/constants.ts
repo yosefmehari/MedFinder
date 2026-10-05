@@ -1,4 +1,12 @@
-import { SubCity, Pharmacy, Medicine, PharmacyResultItem } from './types';
+import {
+  SubCity,
+  Pharmacy,
+  Medicine,
+  PharmacyResultItem,
+  SubscriptionPlan,
+  PharmacySubscription,
+  PlatformSettings,
+} from './types';
 
 export const ADDIS_SUB_CITIES: SubCity[] = [
   { id: 'bole', nameEn: 'Bole', nameAm: 'ቦሌ', lat: 9.0016, lng: 38.7885 },
@@ -244,3 +252,132 @@ export function getMockSearchResults(
   // Sort by nearest distance first
   return results.sort((a, b) => a.distanceKm - b.distanceKm);
 }
+
+export const MOCK_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'plan-starter',
+    name: 'Free Trial / Starter',
+    code: 'starter',
+    description: 'Basic listing on MedFinder with standard search presence in Addis Ababa.',
+    priceEtb: 0,
+    durationDays: 14,
+    features: [
+      'Standard Addis Ababa search listing',
+      'Up to 10 inventory items',
+      'Manual stock updates',
+      'Basic dispensary profile',
+    ],
+    isActive: true,
+  },
+  {
+    id: 'plan-pro',
+    name: 'Pro Dispensary Radar',
+    code: 'pro_radar',
+    description: 'Full dispensary presence with real-time stock updates and 2-hour hold verification.',
+    priceEtb: 650,
+    durationDays: 30,
+    features: [
+      'Unlimited medicine stock inventory',
+      'Real-time PostGIS proximity boost',
+      'Verified EFDA green badge',
+      '2-hour customer hold code validator',
+      'Direct customer phone dialer',
+    ],
+    isActive: true,
+  },
+  {
+    id: 'plan-scarce',
+    name: 'Addis Scarce Medicine Priority',
+    code: 'scarce_priority',
+    description: 'Featured placement on the Addis Ababa Scarcity Radar with instant customer alerts.',
+    priceEtb: 1500,
+    durationDays: 30,
+    features: [
+      'Top placement in search results',
+      'Special Scarcity Radar gold highlight',
+      'Customer Prescription Broadcast match alerts',
+      'Unlimited inventory & holds',
+      'Priority 24/7 technical support',
+    ],
+    isActive: true,
+  },
+  {
+    id: 'plan-enterprise',
+    name: 'Enterprise Pharmacy Chain',
+    code: 'enterprise',
+    description: 'Multi-branch retail pharmacy chains across multiple Addis Ababa sub-cities.',
+    priceEtb: 3500,
+    durationDays: 90,
+    features: [
+      'All Pro & Scarce features',
+      'Multi-branch admin control',
+      'Automated batch inventory uploads',
+      'Dedicated account manager',
+      'Custom Addis promotional banner',
+    ],
+    isActive: true,
+  },
+];
+
+export const MOCK_PHARMACY_SUBSCRIPTIONS: PharmacySubscription[] = [
+  {
+    id: 'sub-mock-1',
+    pharmacyId: 'pharma-1',
+    pharmacyName: 'Kenema Pharmacy No. 1 - Bole',
+    pharmacySubCity: 'Bole',
+    pharmacyPhone: '+251911456789',
+    planId: 'plan-scarce',
+    planName: 'Addis Scarce Medicine Priority',
+    pricePaidEtb: 1500,
+    paymentMethod: 'telebirr',
+    paymentReference: 'TB-2024-998124',
+    status: 'active',
+    startsAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 25 * 86400000).toISOString(),
+    adminNotes: 'Annual partner renewed via Telebirr merchant payment',
+    daysRemaining: 25,
+  },
+  {
+    id: 'sub-mock-2',
+    pharmacyId: 'pharma-2',
+    pharmacyName: 'Lion Pharmacy & Special Dispensary',
+    pharmacySubCity: 'Kirkos',
+    pharmacyPhone: '+251922334455',
+    planId: 'plan-pro',
+    planName: 'Pro Dispensary Radar',
+    pricePaidEtb: 650,
+    paymentMethod: 'cbe_transfer',
+    paymentReference: 'CBE-TX-551982',
+    status: 'active',
+    startsAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 18 * 86400000).toISOString(),
+    adminNotes: 'Paid by bank transfer to MedFinder CBE account',
+    daysRemaining: 18,
+  },
+  {
+    id: 'sub-mock-3',
+    pharmacyId: 'pharma-3',
+    pharmacyName: 'Ethiopian Red Cross Pharmacy',
+    pharmacySubCity: 'Arada',
+    pharmacyPhone: '+251933445566',
+    planId: 'plan-scarce',
+    planName: 'Addis Scarce Medicine Priority',
+    pricePaidEtb: 0,
+    paymentMethod: 'complimentary',
+    paymentReference: 'REDCROSS-PARTNERSHIP-2024',
+    status: 'active',
+    startsAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 80 * 86400000).toISOString(),
+    adminNotes: 'Complimentary community partnership plan',
+    daysRemaining: 80,
+  },
+];
+
+export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
+  holdFeeEtb: 20.0,
+  announcement: {
+    active: false,
+    message: 'Notice: New scarce insulin stock verified across Addis Ababa today.',
+  },
+  allowNewRegistrations: true,
+};

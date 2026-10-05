@@ -27,6 +27,7 @@ async function runMigrations() {
     const migrationFiles = [
       'src/db/migrations/001_initial_schema.sql',
       'src/db/migrations/002_seed_data.sql',
+      'src/db/migrations/003_admin_and_subscriptions.sql',
     ];
 
     for (const relativePath of migrationFiles) {
@@ -55,11 +56,15 @@ async function runMigrations() {
     const pharmaRes = await client.query('SELECT COUNT(*) FROM pharmacies;');
     const medRes = await client.query('SELECT COUNT(*) FROM medicines;');
     const invRes = await client.query('SELECT COUNT(*) FROM pharmacy_inventory;');
+    const planRes = await client.query('SELECT COUNT(*) FROM subscription_plans;');
+    const subRes = await client.query('SELECT COUNT(*) FROM pharmacy_subscriptions;');
 
     console.log('\n🎉 Database migrations & seeding complete!');
     console.log(`📊 Verified Pharmacies in DB: ${pharmaRes.rows[0].count}`);
     console.log(`📊 Verified Medicines in DB: ${medRes.rows[0].count}`);
     console.log(`📊 Active Stock Records in DB: ${invRes.rows[0].count}`);
+    console.log(`📊 Subscription Plans in DB: ${planRes.rows[0].count}`);
+    console.log(`📊 Active Subscriptions in DB: ${subRes.rows[0].count}`);
   } finally {
     client.release();
     await pool.end();
